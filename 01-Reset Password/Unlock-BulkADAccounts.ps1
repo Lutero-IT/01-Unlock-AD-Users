@@ -6,7 +6,7 @@
 # POINT 1 & 2 #
 Write-Host "Checking if there are any locked accounts..."
 $result = Search-ADAccount -LockedOut
-$formattedResult = $result | Format-Table Name, ObjectClass, LockedOut
+$formattedResult = $result | Format-Table Name, ObjectClass, LockedOut # tu dodać ograniczenie do wyświetlanych users
 
 if ($result -eq $null) {
     Write-Host "No locked accounts found in the database!"
@@ -19,22 +19,88 @@ if ($result -eq $null) {
         while ($result.Count -gt 0) {
             Write-Host "Which accounts do you wish to unlock?"
             #Make options to choose (1. User/Users | 2. All | 3. Exit)
-            # Add Option "4. Show locked accounts"
             Write-Host "OPTIONS:"
             Write-Host "    1. User/Users"
             Write-Host "    2. All"
             Write-Host "    3. Exit"
+            Write-Host "    4. Show list"
             $userChoice = Read-Host "Type option number or option value"
 
             # Options Lits #
             $userOptions = "1","one","user","users"
             $allOptions = "2","two","all"
             $exitOptions = "3","three","exit"
+            $listOptions = "4", "four", "show list", "show", "list"
 
             # OPTION 1: Unlock User/Users
             if ($userChoice -in $userOptions) {
-                Write-Host "Script in progress. Terminating the loop..."
-                break
+                Write-Host "Chose option number 1 - Unlock User or Users"
+                Write-Host "Type user or list of users separated by comma that you want to unlock"
+                Write-Host "For example 'John, Andre, Matthew'"
+                $usersString = Read-Host
+                $formatedList = $usersString.Split(',').Trim()
+
+                foreach ($user in $formatedList) {
+                    try {
+                        $user = Get-ADUser -Identity $user -Properties * -ErrorAction Stop
+                        $username = $user.name
+                        Write-Host "$username found in database!"
+                    } catch {
+                        Write-Host "Account $username doesn't exist in database!"
+                        Write-Host "Removing $username account from a list..."
+                        $formatedList.Remove($user)
+                        $formatedList = $formatedList | Where-Object { $_ -ne $user }
+                        Write-Host "$user account removed from a list"
+                    }   
+
+                    Write-Host "Is $username account locked?"                        
+                    $isLocked = $user.LockedOut
+                    if ($isLocked) {
+                        $isLocked
+                        Write-Host "Account is locked"
+                    } else {
+                        $isLocked
+                        Write-Host "Cannot unlock account. Account is not locked out!"
+                        Write-Host "Removing $username account from a list..."
+                        $formatedList = $formatedList | Where-Object { $_ -ne $username }
+                        Write-Host "$username account removed from a list"
+                    }
+                }
+                
+                    # CHECK IF FormatedList is empty and if is, dont execute code below !!!
+                    if ($formatedList -eq $null) {
+                        Write-Host "### LIST ###"
+                        Write-Host "------------"
+                        Write-Host "List is empty. Returning to main menu"
+                    } else {
+                        Write-Host "Accounts you wish to unlock:"
+                        Write-Host "### LIST ###"
+                        $formatedList
+
+                        Write-Host "Are you sure you want to unlock these accounts?"
+                        while ($true) {
+                            $confirm = Read-Host "Type [Yes/Y] or [No/N]"
+                            $yesList = "y", "yes"
+                            $noList = "n", "no"
+
+                            if ($confirm -in $yesList) {
+                                Write-Host "Unlocking accounts..."
+                                $formatedList | Get-ADUser | Unlock-ADAccount
+                                Write-Host "Accounts unlocked!"
+                                break
+                            } elseif ($confirm -in $noList) {
+                                Write-Host "Accounts left locked"
+                                break
+                            } else {
+                                Write-Host "Invalid value!"
+                                Write-Host "Choose one of the suggested options"
+                            }
+                        }
+                    }
+                
+                # UPDATE the list of locked accounts!
+                $result = Search-ADAccount -LockedOut
+
             # OPTION 2: Unlock ALL
             } elseif ($userChoice -in $allOptions) {
                 Write-Host "Chose option number 2 - Unlock all the users"
@@ -45,25 +111,20 @@ if ($result -eq $null) {
             # OPTION 3: Exit
             } elseif ($userChoice -in $exitOptions) {
                 Write-Host "Chose option number 3 - Exit"
-                Write-Host "Terminating the loop..."
+                Write-Host "Terminating the program..."
                 break
+            }elseif ($userChoice -in $listOptions) {
+                Write-Host "Chose option number 4 - Show list"
+                $formattedResult = $result | Format-Table Name, ObjectClass, LockedOut
+                Write-Host "Displaying list of locked accoutns..."
+                Write-Host ""
+                Write-Host "### LIST ###"
+                $formattedResult
             } else {
                 Write-Host "Non existent option or invalid value."
                 Write-Host "Type number of option like 'one', '2', or 'THREE'..."
                 Write-Host "...or option value like 'user', 'ALL' or 'Exit' "
             }
         }
-        Write-Host "Loop Terminated!"
+        Write-Host "Program Terminated!"
     }
-
-# make a commit after finishind options 'All' or 'Exit'
-
-# make a loop that will iterate as long as there are any locked accounts left or until user choose to exit the script
-# in order to make a loop I have to turn an array into a number, that represents the number of users. use length of the array
-# and on each iteration check whether it is greter than 1. if it is not, terminate the loop and show a message that there are
-# no more locked accounts
-
-
-# POINT 4 #
-# Unlock only specified users #
-# 1. get list | 2. present the list | 3. ask user | 4. unlock chosen users

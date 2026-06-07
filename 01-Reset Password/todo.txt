@@ -1,8 +1,0 @@
-1. Check Account Lockout Policy to know what is the limit for BAD PASSWORD ACCOUNT.
-2. If there is no limit, set it with GPO for a domain ( industrial standard: 3-5 attempts )
-    To check limit use -> "net accounts"
-    If the limit is set to 0 or "Never", set it with -> "net accounts /lockoutthreshold: 3"
-### DONE ###
-3. Lock the user account and find out how to unlock it. Find the solution, documentate it and if
-possible, automate it so it can be used for multiple users.
-

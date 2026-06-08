@@ -3,28 +3,34 @@
 # 3. Unlock accounts and return the output.
 # 4. Unlock only specifed users
 
+$Indent = "`t"
+# add indent and make atomic commit NOW!!!
+
 # POINT 1 & 2 #
-Write-Host "Checking if there are any locked accounts..."
+Write-Host "${Indent}"
+Write-Host "${Indent}Checking if there are any locked accounts..."
 $result = Search-ADAccount -LockedOut
-$formattedResult = $result | Format-Table Name, ObjectClass, LockedOut # tu dodać ograniczenie do wyświetlanych users
+$formattedResult = $result | Format-Table Name, ObjectClass, LockedOut | Out-String
+$indentedResult = $formattedResult -replace '(?m)^', "$Indent"
+# tu dodać ograniczenie do wyświetlanych users
 
 if ($result -eq $null) {
-    Write-Host "No locked accounts found in the database!"
+    Write-Host "${Indent}No locked accounts found in the database!"
     } else {
-        Write-Host "Found locked accounts in the database!"
-        $formattedResult  # ogranicz liczbe wyswietlanych users do 50 lub 100 dla wielkich korporacji
+        Write-Host "${Indent}Found locked accounts in the database!"
+        $indentedResult  # ogranicz liczbe wyswietlanych users do 50 lub 100 dla wielkich korporacji
+        # Write-Host "${Indent}" z $formattedResult nie działa, zobaczyć dlaczego
 
         ### LOOP ###
 
         while ($result.Count -gt 0) {
-            Write-Host "Which accounts do you wish to unlock?"
-            #Make options to choose (1. User/Users | 2. All | 3. Exit)
-            Write-Host "OPTIONS:"
-            Write-Host "    1. User/Users"
-            Write-Host "    2. All"
-            Write-Host "    3. Exit"
-            Write-Host "    4. Show list"
-            $userChoice = Read-Host "Type option number or option value"
+            Write-Host "${Indent}Which accounts do you wish to unlock?"
+            Write-Host "${Indent}OPTIONS:" -ForegroundColor Cyan
+            Write-Host "${Indent}1. User/Users" -ForegroundColor Yellow
+            Write-Host "${Indent}2. All" -ForegroundColor Yellow
+            Write-Host "${Indent}3. Exit" -ForegroundColor Yellow
+            Write-Host "${Indent}4. Show list" -ForegroundColor Yellow
+            $userChoice = Read-Host "${Indent}Type option number or option value"
 
             # Options Lits #
             $userOptions = "1","one","user","users"
@@ -34,66 +40,66 @@ if ($result -eq $null) {
 
             # OPTION 1: Unlock User/Users
             if ($userChoice -in $userOptions) {
-                Write-Host "Chose option number 1 - Unlock User or Users"
-                Write-Host "Type user or list of users separated by comma that you want to unlock"
-                Write-Host "For example 'John, Andre, Matthew'"
-                $usersString = Read-Host
+                Write-Host "${Indent}Chose option number 1 - Unlock User or Users"
+                Write-Host "${Indent}Type user or list of users separated by comma that you want to unlock"
+                Write-Host "${Indent}For example 'John, Andre, Matthew'"
+                $usersString = Read-Host "${Indent}" # change prompt sign to '>>' !!!
                 $formatedList = $usersString.Split(',').Trim()
-
+                # pressing Enter without typing value triggers error 'ArgumentOutOfRangeException'. WHY? CHECK IT !!!
                 foreach ($user in $formatedList) {
                     try {
                         $user = Get-ADUser -Identity $user -Properties * -ErrorAction Stop
                         $username = $user.name
-                        Write-Host "$username found in database!"
+                        Write-Host "${Indent}$username found in database!"
                     } catch {
-                        Write-Host "Account $username doesn't exist in database!"
-                        Write-Host "Removing $username account from a list..."
+                        Write-Host "${Indent}Account $username doesn't exist in database!"
+                        Write-Host "${Indent}Removing $username account from a list..."
                         $formatedList.Remove($user)
                         $formatedList = $formatedList | Where-Object { $_ -ne $user }
-                        Write-Host "$user account removed from a list"
+                        Write-Host "${Indent}$user account removed from a list"
                     }   
 
-                    Write-Host "Is $username account locked?"                        
+                    Write-Host "${Indent}Is $username account locked?"                        
                     $isLocked = $user.LockedOut
                     if ($isLocked) {
-                        $isLocked
-                        Write-Host "Account is locked"
+                        Write-Host "${Indent}$isLocked"
+                        Write-Host "${Indent}Account is locked"
                     } else {
-                        $isLocked
-                        Write-Host "Cannot unlock account. Account is not locked out!"
-                        Write-Host "Removing $username account from a list..."
+                        Write-Host "${Indent}$isLocked"
+                        Write-Host "${Indent}Cannot unlock account. Account is not locked out!"
+                        Write-Host "${Indent}Removing $username account from a list..."
                         $formatedList = $formatedList | Where-Object { $_ -ne $username }
-                        Write-Host "$username account removed from a list"
+                        Write-Host "${Indent}$username account removed from a list"
                     }
                 }
                 
-                    # CHECK IF FormatedList is empty and if is, dont execute code below !!!
                     if ($formatedList -eq $null) {
-                        Write-Host "### LIST ###"
-                        Write-Host "------------"
-                        Write-Host "List is empty. Returning to main menu"
+                        Write-Host "${Indent}### LIST ###"
+                        Write-Host "${Indent}------------"
+                        Write-Host "${Indent}List is empty. Returning to main menu"
                     } else {
-                        Write-Host "Accounts you wish to unlock:"
-                        Write-Host "### LIST ###"
-                        $formatedList
+                        Write-Host "${Indent}Accounts you wish to unlock:"
+                        Write-Host "${Indent}### LIST ###"
+                        Write-Host "${Indent}$formatedList"
+                        # format LIST to look like a TABLE ( record /breakline record)
 
-                        Write-Host "Are you sure you want to unlock these accounts?"
+                        Write-Host "${Indent}Are you sure you want to unlock these accounts?"
                         while ($true) {
-                            $confirm = Read-Host "Type [Yes/Y] or [No/N]"
+                            $confirm = Read-Host "${Indent}Type [Yes/Y] or [No/N]"
                             $yesList = "y", "yes"
                             $noList = "n", "no"
 
                             if ($confirm -in $yesList) {
-                                Write-Host "Unlocking accounts..."
+                                Write-Host "${Indent}Unlocking accounts..."
                                 $formatedList | Get-ADUser | Unlock-ADAccount
-                                Write-Host "Accounts unlocked!"
+                                Write-Host "${Indent}Accounts unlocked!"
                                 break
                             } elseif ($confirm -in $noList) {
-                                Write-Host "Accounts left locked"
+                                Write-Host "${Indent}Accounts left locked"
                                 break
                             } else {
-                                Write-Host "Invalid value!"
-                                Write-Host "Choose one of the suggested options"
+                                Write-Host "${Indent}Invalid value!"
+                                Write-Host "${Indent}Choose one of the suggested options"
                             }
                         }
                     }
@@ -103,28 +109,32 @@ if ($result -eq $null) {
 
             # OPTION 2: Unlock ALL
             } elseif ($userChoice -in $allOptions) {
-                Write-Host "Chose option number 2 - Unlock all the users"
-                Write-Host "Unlocking all the users..."
+                Write-Host "${Indent}Chose option number 2 - Unlock all the users"
+                Write-Host "${Indent}Unlocking all the users..."
                 Search-ADAccount -LockedOut | Unlock-ADAccount
-                Write-Host "All the users unlocked!"
+                Write-Host "${Indent}All the users unlocked!"
                 $result = Search-ADAccount -LockedOut
             # OPTION 3: Exit
             } elseif ($userChoice -in $exitOptions) {
-                Write-Host "Chose option number 3 - Exit"
-                Write-Host "Terminating the program..."
+                Write-Host "${Indent}Chose option number 3 - Exit"
+                Write-Host "${Indent}Terminating the program..."
                 break
             }elseif ($userChoice -in $listOptions) {
-                Write-Host "Chose option number 4 - Show list"
-                $formattedResult = $result | Format-Table Name, ObjectClass, LockedOut
-                Write-Host "Displaying list of locked accoutns..."
-                Write-Host ""
-                Write-Host "### LIST ###"
-                $formattedResult
+                Write-Host "${Indent}Chose option number 4 - Show list"
+                $formattedResult = $result | Format-Table Name, ObjectClass, LockedOut | Out-String
+                $indentedResult = $formattedResult -replace '(?m)^', "$Indent"
+                Write-Host "${Indent}Displaying list of locked accoutns..."
+                Write-Host "${Indent}"
+                Write-Host "${Indent}### LIST ###"
+                $indentedResult
             } else {
-                Write-Host "Non existent option or invalid value."
-                Write-Host "Type number of option like 'one', '2', or 'THREE'..."
-                Write-Host "...or option value like 'user', 'ALL' or 'Exit' "
+                Write-Host "${Indent}Non existent option or invalid value."
+                Write-Host "${Indent}Type number of option like 'one', '2', or 'THREE'..."
+                Write-Host "${Indent}...or option value like 'user', 'ALL' or 'Exit' "
             }
         }
-        Write-Host "Program Terminated!"
+        Write-Host "${Indent}Program Terminated!"
     }
+
+### NOTES ###
+# jak zrobic, zeby wszystkie linie byly o jednego Taba od krawedzi konsoli?

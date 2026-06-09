@@ -13,31 +13,17 @@ function Read-IndentedLog ($Message) {
     Read-Host "${Indent}$Message"
 }
 
-# MAKE ATOMIC COMMIT AFTER IMPLEMENTING READ-INDETNEDLOG FUNCIOTN AND
-# CODE REFACTORING !!!
-
-# COMMITS PLAN:
-# 1 commit - after making use of @Args ( PowerShell Splatting) to use parameters like
-# -ForegroundColor or -BackgroundColor
-
-# 2 commit - after refactoring sricpt and implementing colors to output messages
-# mention that you removed newline character (`n) from Write-IndentedLog and put Write-Host
-
-# 3 commit - solve the problem when no value is provided and just enter pressed
-# along with this remove all the obsolete comments and notes. leave only important ones.
-
 Write-IndentedLog ""
 Write-IndentedLog "Checking if there are any locked accounts..."
 $result = Search-ADAccount -LockedOut
 $formattedResult = $result | Format-Table Name, ObjectClass, LockedOut | Out-String
 $indentedResult = $formattedResult -replace '(?m)^', "$Indent"
-# tu dodać ograniczenie do wyświetlanych users
 
 if ($result -eq $null) {
     Write-IndentedLog "No locked accounts found in the database!" -BackgroundColor Yellow -ForegroundColor Black
     } else {
         Write-IndentedLog "Found locked accounts in the database!"  -BackgroundColor Yellow -ForegroundColor Black
-        $indentedResult  # ogranicz liczbe wyswietlanych users do 50 lub 100 dla wielkich korporacji
+        $indentedResult
 
         ### MAIN LOOP ###
         while ($result.Count -gt 0) {
@@ -57,25 +43,36 @@ if ($result -eq $null) {
 
             # OPTION 1: UNLOCK USER/USERS #
             if ($userChoice -in $userOptions) {
-                Write-IndentedLog "Chose option number 1 - Unlock User or Users"  -BackgroundColor Yellow -ForegroundColor Black
-                Write-IndentedLog "Type user or list of users separated by comma that you want to unlock"
-                Write-IndentedLog "For example 'John, Andre, Matthew'"
-                # PROBLEM HERE !!! CHOSE OPTION 1 AND SOLVE IT !
-                # sprawdz czy Read-Host może mieć pusty prompt (-Prompt "") ???
+                Write-IndentedLog "Chose option number 1 - Unlock User or Users" -BackgroundColor Yellow -ForegroundColor Black
+                
+                # LOOP: Check if $userChoice is not equl null or length = 0 to handle no input
+                while ($true) {
+                    Write-IndentedLog "Type user or list of users separated by comma that you want to unlock"
+                    Write-IndentedLog "For example 'John, Andre, Matthew'"
 
-                $usersString = Read-IndentedLog ">>>"  # change prompt sign to '>>' !!!
+                    $usersString = Read-IndentedLog ""
+
+                    if ($usersString.Length -eq 0) {
+                        Write-IndentedLog "No value passed!" -BackgroundColor Red -ForegroundColor Black
+                    } else {
+                        break
+                    }
+                }
+                # ELSE: execute code below
 
                 $formatedList = $usersString.Split(',').Trim()
-                # pressing Enter without typing value triggers error 'ArgumentOutOfRangeException'. WHY? CHECK IT !!!
                 foreach ($user in $formatedList) {
                     try {
                         $user = Get-ADUser -Identity $user -Properties * -ErrorAction Stop
                         $username = $user.name
+                        # if user doesn,t exist, I can't retrieve .name parameter
+                        # and parameter from previous session is saved, like Gomez
+                        # I would need to rewrite code, build it around the condition 'if user exist in database...
+                        # ... do this and this, if not don't even bother
                         Write-IndentedLog "$username found in database!" -BackgroundColor Yellow -ForegroundColor Black
                     } catch {
                         Write-IndentedLog "Account $username doesn't exist in database!" -BackgroundColor Yellow -ForegroundColor Black
                         Write-IndentedLog "Removing $username account from a list..."
-                        $formatedList.Remove($user)
                         $formatedList = $formatedList | Where-Object { $_ -ne $user }
                         Write-IndentedLog "$user account removed from a list"
                     }   
@@ -101,9 +98,12 @@ if ($result -eq $null) {
                     } else {
                         Write-IndentedLog "Accounts you wish to unlock:"
                         Write-IndentedLog "### LIST ###"
-                        Write-IndentedLog "$formatedList"
-                        # format LIST to look like a TABLE ( record /breakline record) !!! DO IT !!!
 
+                        foreach ($user in $formatedList) {
+                            Write-Host "${Indent}$user"
+                        }
+
+                        Write-Host
                         Write-IndentedLog "Are you sure you want to unlock these accounts?"
                         while ($true) {
                             $confirm = Read-IndentedLog "Type [Yes/Y/y] or [No/N/n]"

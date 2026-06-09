@@ -60,3 +60,16 @@ To manage multiple locked accounts across the domain simultaneously, execute:
 ```
 
 This tool will automatically query the Active Directory database for all currently locked accounts and present a control menu for batch processing.
+
+# Technical Debt & Known Issues
+
+During the final testing phase, a bug was observed. When Option 1 (Unlock User/Users) 
+is chosen and a non-existent user identity is supplied, the program cannot retrieve 
+the 'name' property from the target AD user object to assign it to the $username variable. 
+
+This results in data inconsistencies, displaying a stale parameter value from the previous AD user 
+across subsequent loop iterations. 
+
+To solve this flaw, a code rewrite is required. The program must first verify whether 
+the provided user exists in the database and, if not, inform the administrator immediately 
+instead of attempting to retrieve properties from an absent account.

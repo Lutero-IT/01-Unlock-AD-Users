@@ -63,12 +63,9 @@ if ($result -eq $null) {
                 $formatedList = $usersString.Split(',').Trim()
                 foreach ($user in $formatedList) {
                     try {
+                        $username = $user.name # Known Issues !!!
+                        Write-Host "Retrieved 'name' parameter of user $user. The parameter value is $username"
                         $user = Get-ADUser -Identity $user -Properties * -ErrorAction Stop
-                        $username = $user.name
-                        # if user doesn,t exist, I can't retrieve .name parameter
-                        # and parameter from previous session is saved, like Gomez
-                        # I would need to rewrite code, build it around the condition 'if user exist in database...
-                        # ... do this and this, if not don't even bother
                         Write-IndentedLog "$username found in database!" -BackgroundColor Yellow -ForegroundColor Black
                     } catch {
                         Write-IndentedLog "Account $username doesn't exist in database!" -BackgroundColor Yellow -ForegroundColor Black
